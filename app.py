@@ -1,4 +1,4 @@
-app_py_fixed = '''import streamlit as st
+app_py_complete = '''import streamlit as st
 import joblib
 import numpy as np
 import pandas as pd
@@ -9,8 +9,9 @@ def load_model():
     try:
         model = joblib.load('house_price_model.joblib')
         return model
-    except:
-        st.error("Model file not found! Please upload house_price_model.joblib")
+    except Exception as e:
+        st.error(f"Model file not found: {str(e)}")
+        st.error("Please ensure 'house_price_model.joblib' is uploaded to your repository")
         return None
 
 def calculate_features(area, bedrooms, bathrooms, stories, parking, 
@@ -62,7 +63,7 @@ def main():
     # Load model
     model = load_model()
     if model is None:
-        return
+        st.stop()
     
     # Create input interface
     col1, col2 = st.columns(2)
