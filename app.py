@@ -2,16 +2,35 @@ import streamlit as st
 import joblib
 import numpy as np
 import pandas as pd
+import os
 
-# Load the trained model
+# Load the trained model with better error handling
 @st.cache_resource
 def load_model():
     try:
+        # Check if file exists
+        if not os.path.exists('house_price_model.joblib'):
+            st.error("❌ Model file 'house_price_model.joblib' not found in the repository!")
+            st.write("**Files in current directory:**")
+            files = os.listdir('.')
+            for file in files:
+                st.write(f"• {file}")
+            st.write("**Please ensure 'house_price_model.joblib' is uploaded to your GitHub repository root directory.**")
+            return None
+        
+        # Try to load the model
         model = joblib.load('house_price_model.joblib')
+        st.success("✅ Model loaded successfully!")
         return model
+        
     except Exception as e:
-        st.error(f"Model file not found: {str(e)}")
-        st.error("Please ensure 'house_price_model.joblib' is uploaded to your repository")
+        st.error(f"❌ Error loading model: {str(e)}")
+        st.write("**Debugging information:**")
+        st.write(f"• Error type: {type(e).__name__}")
+        st.write(f"• Error details: {str(e)}")
+        if os.path.exists('house_price_model.joblib'):
+            file_size = os.path.getsize('house_price_model.joblib')
+            st.write(f"• Model file exists, size: {file_size} bytes")
         return None
 
 def calculate_features(area, bedrooms, bathrooms, stories, parking, 
@@ -59,6 +78,20 @@ def main():
     
     st.title("🏠 AI House Price Predictor")
     st.write("Enter your house details to get an AI-powered price estimate")
+    
+    # Debug information
+    with st.expander("🔧 Debug Information (click to expand)"):
+        st.write("**System Information:**")
+        st.write(f"• Current working directory: {os.getcwd()}")
+        st.write(f"• Streamlit version: {st.__version__}")
+        st.write("**Files in directory:**")
+        try:
+            files = os.listdir('.')
+            for file in files:
+                if file.endswith(('.joblib', '.pkl', '.py', '.txt')):
+                    st.write(f"• {file}")
+        except:
+            st.write("Could not list files")
     
     # Load model
     model = load_model()
@@ -152,8 +185,9 @@ def main():
                 st.write(f"• Price per sq ft: ${price_per_sqft:.2f}")
                 
         except Exception as e:
-            st.error(f"Error making prediction: {str(e)}")
-            st.write("Please check that all inputs are valid.")
+            st.error(f"❌ Error making prediction: {str(e)}")
+            st.write(f"**Error type:** {type(e).__name__}")
+            st.write("**Please check that all inputs are valid.**")
 
 if __name__ == "__main__":
     main()
