@@ -1,4 +1,4 @@
-app_py_complete = '''import streamlit as st
+import streamlit as st
 import joblib
 import numpy as np
 import pandas as pd
@@ -157,4 +157,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-'''
