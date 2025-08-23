@@ -21,21 +21,28 @@ def linear_regression_predict(features):
     coefficients = np.array(MODEL_PARAMS['coefficients'])
     intercept = MODEL_PARAMS['intercept']
     
+    # Ensure features is the right shape
+    if features.ndim == 1:
+        features = features.reshape(1, -1)
+    
     # Standardize features (same as StandardScaler)
     features_standardized = (features - feature_means) / feature_scales
     
     # Linear regression prediction: y = intercept + sum(coef * x)
     log_price = intercept + np.dot(features_standardized, coefficients)
     
+    # Clamp log_price to prevent overflow
+    log_price = np.clip(log_price, -50, 50)  # Prevents exp() overflow
+    
     # Convert from log space to actual price
     predicted_price = np.exp(log_price)
     
     return predicted_price
 
-def calculate_features(area, bedrooms, bathrooms, stories, parking, 
-                      mainroad, guestroom, basement, hotwaterheating, 
-                      airconditioning, prefarea, furnishing):
-    """Calculate features in the EXACT same order as training"""
+def calculate_features_stable(area, bedrooms, bathrooms, stories, parking, 
+                             mainroad, guestroom, basement, hotwaterheating, 
+                             airconditioning, prefarea, furnishing):
+    """Calculate features without problematic price_per_sqft iteration"""
     
     # Basic engineered features
     area_per_bed = area / max(bedrooms, 1)
@@ -55,8 +62,8 @@ def calculate_features(area, bedrooms, bathrooms, stories, parking,
     furnishingstatus_semi_furnished = 1 if furnishing == 'Semi-Furnished' else 0
     furnishingstatus_unfurnished = 1 if furnishing == 'Unfurnished' else 0
     
-    # Price per sqft - start with placeholder
-    price_per_sqft = 200
+    # Use training mean for price_per_sqft (stable approach)
+    price_per_sqft = 199.827  # Training mean value
     
     # Create feature array in EXACT training order
     features = np.array([
@@ -68,23 +75,6 @@ def calculate_features(area, bedrooms, bathrooms, stories, parking,
     ])
     
     return features
-
-def predict_with_price_iteration(area, bedrooms, bathrooms, stories, parking, 
-                                mainroad, guestroom, basement, hotwaterheating, 
-                                airconditioning, prefarea, furnishing):
-    """Predict price with iterative price_per_sqft calculation"""
-    
-    features = calculate_features(area, bedrooms, bathrooms, stories, parking, 
-                                mainroad, guestroom, basement, hotwaterheating, 
-                                airconditioning, prefarea, furnishing)
-    
-    # Iterative refinement of price_per_sqft
-    for i in range(3):  # 3 iterations should converge
-        predicted_price = linear_regression_predict(features)
-        new_price_per_sqft = predicted_price / area
-        features[11] = new_price_per_sqft  # Update price_per_sqft
-    
-    return predicted_price
 
 def main():
     st.set_page_config(page_title="🏠 AI House Price Predictor", layout="wide")
@@ -129,13 +119,21 @@ def main():
     # Prediction
     if st.button("🔮 Predict House Price", type="primary"):
         try:
-            # Make prediction using exact Linear Regression model
-            predicted_price = predict_with_price_iteration(
+            # Calculate features (stable version)
+            features = calculate_features_stable(
                 area, bedrooms, bathrooms, stories, parking,
                 int(mainroad), int(guestroom), int(basement), 
                 int(hotwaterheating), int(airconditioning), int(prefarea),
                 furnishing
             )
+            
+            # Make prediction using exact Linear Regression model
+            predicted_price = linear_regression_predict(features)
+            
+            # Ensure prediction is finite and reasonable
+            if not np.isfinite(predicted_price) or predicted_price <= 0:
+                st.error("❌ Prediction calculation error. Please try different values.")
+                return
             
             # Display results
             st.success("✅ Prediction Complete!")
@@ -194,6 +192,7 @@ def main():
         st.write(f"**R² Score:** {MODEL_PARAMS['r2_score']:.4f}")
         st.write(f"**Features:** {len(MODEL_PARAMS['feature_names'])}")
         st.write("**Status:** Using exact trained coefficients")
+        st.write("**Version:** Stable (no price iteration)")
 
 if __name__ == "__main__":
     main()
