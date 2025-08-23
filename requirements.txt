@@ -1,0 +1,8 @@
+requirements_complete = '''streamlit
+numpy
+pandas
+scikit-learn
+joblib
+xgboost
+matplotlib
+seaborn
