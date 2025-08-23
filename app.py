@@ -3,31 +3,39 @@ import numpy as np
 import pandas as pd
 import os
 
-# Try to load model, but have a fallback if it fails
-@st.cache_resource
-def load_model():
-    try:
-        import joblib
-        if os.path.exists('house_price_model.joblib'):
-            file_size = os.path.getsize('house_price_model.joblib')
-            if file_size > 1000:  # File should be bigger than 1KB
-                model = joblib.load('house_price_model.joblib')
-                st.success("✅ AI Model loaded successfully!")
-                return model
-            else:
-                st.warning("⚠️ Model file corrupted (too small). Using fallback prediction.")
-                return None
-        else:
-            st.warning("⚠️ Model file not found. Using fallback prediction.")
-            return None
-    except Exception as e:
-        st.warning(f"⚠️ Model loading failed: {str(e)}. Using fallback prediction.")
-        return None
+# Your exact Linear Regression model parameters (extracted from training)
+MODEL_PARAMS = {
+    'feature_names': ['area', 'bedrooms', 'bathrooms', 'stories', 'mainroad', 'guestroom', 'basement', 'hotwaterheating', 'airconditioning', 'parking', 'prefarea', 'price_per_sqft', 'furnishingstatus_semi-furnished', 'furnishingstatus_unfurnished', 'area_per_bed', 'bath_per_bed', 'parking_per_bed', 'amenity_count', 'area_pref', 'area_ac', 'area_sqrt'],
+    'feature_means': [2473.0, 2.968, 1.29, 1.63, 0.822, 0.274, 0.168, 0.432, 0.658, 0.91, 0.256, 199.827, 0.406, 0.268, 924.91, 0.491, 0.418, 3.61, 633.77, 1627.67, 49.638],
+    'feature_scales': [671.676, 0.868, 0.693, 0.601, 0.383, 0.446, 0.374, 0.496, 0.475, 0.968, 0.437, 52.959, 0.491, 0.443, 388.68, 0.329, 0.264, 1.658, 1133.29, 1159.96, 6.703],
+    'coefficients': [0.940392, -0.213932, 0.201837, 0.121816, -0.013853, 0.013926, 0.037952, 0.003746, 0.023701, 0.037654, 0.007059, 0.067831, 0.036134, 0.016593, -0.536326, 0.041831, -0.024639, 0.074062, 0.00638, 0.089359, -0.168089],
+    'intercept': 15.301071,
+    'model_type': 'Linear Regression',
+    'r2_score': 0.9673
+}
+
+def linear_regression_predict(features):
+    """Exact replication of your trained Linear Regression model"""
+    feature_means = np.array(MODEL_PARAMS['feature_means'])
+    feature_scales = np.array(MODEL_PARAMS['feature_scales'])
+    coefficients = np.array(MODEL_PARAMS['coefficients'])
+    intercept = MODEL_PARAMS['intercept']
+    
+    # Standardize features (same as StandardScaler)
+    features_standardized = (features - feature_means) / feature_scales
+    
+    # Linear regression prediction: y = intercept + sum(coef * x)
+    log_price = intercept + np.dot(features_standardized, coefficients)
+    
+    # Convert from log space to actual price
+    predicted_price = np.exp(log_price)
+    
+    return predicted_price
 
 def calculate_features(area, bedrooms, bathrooms, stories, parking, 
                       mainroad, guestroom, basement, hotwaterheating, 
                       airconditioning, prefarea, furnishing):
-    """Calculate all engineered features automatically from user inputs"""
+    """Calculate features in the EXACT same order as training"""
     
     # Basic engineered features
     area_per_bed = area / max(bedrooms, 1)
@@ -43,70 +51,40 @@ def calculate_features(area, bedrooms, bathrooms, stories, parking,
     area_ac = area * airconditioning
     area_sqrt = np.sqrt(area)
     
-    # Furnishing encoding
-    furnishingstatus_furnished = 1 if furnishing == 'Furnished' else 0
+    # Furnishing encoding (furnished is reference, so both are 0)
     furnishingstatus_semi_furnished = 1 if furnishing == 'Semi-Furnished' else 0
+    furnishingstatus_unfurnished = 1 if furnishing == 'Unfurnished' else 0
     
+    # Price per sqft - start with placeholder
     price_per_sqft = 200
     
-    features = np.array([[
+    # Create feature array in EXACT training order
+    features = np.array([
         area, bedrooms, bathrooms, stories, mainroad, guestroom, basement,
-        hotwaterheating, airconditioning, parking, prefarea,
-        furnishingstatus_furnished, furnishingstatus_semi_furnished,
-        price_per_sqft, area_per_bed, bath_per_bed, parking_per_bed,
-        amenity_count, area_pref, area_ac, area_sqrt
-    ]])
+        hotwaterheating, airconditioning, parking, prefarea, price_per_sqft,
+        furnishingstatus_semi_furnished, furnishingstatus_unfurnished,
+        area_per_bed, bath_per_bed, parking_per_bed, amenity_count,
+        area_pref, area_ac, area_sqrt
+    ])
     
     return features
 
-def predict_with_ai_model(model, features):
-    """Use the actual trained AI model for prediction"""
-    try:
-        prediction_log = model.predict(features)[0]
-        predicted_price = np.exp(prediction_log)
-        return predicted_price, "AI Model"
-    except:
-        return fallback_prediction(features), "AI Model (fallback)"
-
-def fallback_prediction(features):
-    """Intelligent fallback prediction based on your training logic"""
+def predict_with_price_iteration(area, bedrooms, bathrooms, stories, parking, 
+                                mainroad, guestroom, basement, hotwaterheating, 
+                                airconditioning, prefarea, furnishing):
+    """Predict price with iterative price_per_sqft calculation"""
     
-    area = features[0][0]
-    bedrooms = features[0][1] 
-    bathrooms = features[0][2]
-    stories = features[0][3]
-    amenity_count = features[0][17]
-    furnishing_furnished = features[0][11]
-    furnishing_semi = features[0][12]
+    features = calculate_features(area, bedrooms, bathrooms, stories, parking, 
+                                mainroad, guestroom, basement, hotwaterheating, 
+                                airconditioning, prefarea, furnishing)
     
-    # Advanced pricing algorithm based on your model insights
-    base_price_per_sqft = 100 + (amenity_count * 15)
+    # Iterative refinement of price_per_sqft
+    for i in range(3):  # 3 iterations should converge
+        predicted_price = linear_regression_predict(features)
+        new_price_per_sqft = predicted_price / area
+        features[11] = new_price_per_sqft  # Update price_per_sqft
     
-    if area < 1500:
-        area_multiplier = 1.2
-    elif area > 3500:
-        area_multiplier = 0.9
-    else:
-        area_multiplier = 1.0
-    
-    bedroom_value = bedrooms * 25000
-    bathroom_value = bathrooms * 15000
-    stories_bonus = (stories - 1) * 10000
-    
-    furnishing_bonus = 0
-    if furnishing_furnished:
-        furnishing_bonus = area * 20
-    elif furnishing_semi:
-        furnishing_bonus = area * 10
-    
-    base_price = area * base_price_per_sqft * area_multiplier
-    total_price = base_price + bedroom_value + bathroom_value + stories_bonus + furnishing_bonus
-    
-    variation = np.random.normal(1.0, 0.05)
-    final_price = total_price * variation
-    final_price = max(50000, min(2000000, final_price))
-    
-    return final_price
+    return predicted_price
 
 def main():
     st.set_page_config(page_title="🏠 AI House Price Predictor", layout="wide")
@@ -114,8 +92,10 @@ def main():
     st.title("🏠 AI House Price Predictor")
     st.write("Enter your house details to get an AI-powered price estimate")
     
-    model = load_model()
+    # Model info
+    st.success(f"✅ Using trained {MODEL_PARAMS['model_type']} (R² = {MODEL_PARAMS['r2_score']:.4f})")
     
+    # Create input interface
     col1, col2 = st.columns(2)
     
     with col1:
@@ -139,36 +119,36 @@ def main():
                                 options=["Unfurnished", "Semi-Furnished", "Furnished"],
                                 index=0)
     
+    # Input validation warnings
     if bathrooms > bedrooms + 1:
         st.warning("⚠️ Unusual: More bathrooms than bedrooms + 1")
     
     if area < bedrooms * 200:
         st.warning("⚠️ Small area for number of bedrooms")
     
+    # Prediction
     if st.button("🔮 Predict House Price", type="primary"):
         try:
-            features = calculate_features(
+            # Make prediction using exact Linear Regression model
+            predicted_price = predict_with_price_iteration(
                 area, bedrooms, bathrooms, stories, parking,
                 int(mainroad), int(guestroom), int(basement), 
                 int(hotwaterheating), int(airconditioning), int(prefarea),
                 furnishing
             )
             
-            if model is not None:
-                predicted_price, model_type = predict_with_ai_model(model, features)
-            else:
-                predicted_price = fallback_prediction(features)
-                model_type = "Smart Algorithm"
-            
+            # Display results
             st.success("✅ Prediction Complete!")
-            st.info(f"🤖 Prediction Method: {model_type}")
+            st.info("🤖 Using your trained Linear Regression model")
             
+            # Main result
             st.metric(
                 label="🏠 Estimated House Price",
                 value=f"${predicted_price:,.0f}",
                 delta=f"±{predicted_price*0.1:,.0f} (±10%)"
             )
             
+            # Additional metrics
             col1, col2, col3 = st.columns(3)
             
             with col1:
@@ -184,6 +164,7 @@ def main():
                 efficiency = area / bedrooms if bedrooms > 0 else 0
                 st.metric("📐 Area per Bedroom", f"{efficiency:.0f} sq ft")
             
+            # Detailed breakdown
             with st.expander("🔍 See Prediction Breakdown"):
                 st.write("**Input Summary:**")
                 st.write(f"• Area: {area:,} sq ft")
@@ -197,25 +178,22 @@ def main():
                 st.write(f"• Bathrooms per bedroom: {bathrooms/max(bedrooms,1):.2f}")
                 st.write(f"• Price per sq ft: ${price_per_sqft:.2f}")
                 
-                if model is None:
-                    st.write("**Note:** Using intelligent fallback algorithm based on your ML model insights.")
+                st.write("**Model Information:**")
+                st.write(f"• Model: {MODEL_PARAMS['model_type']}")
+                st.write(f"• R² Score: {MODEL_PARAMS['r2_score']:.4f}")
+                st.write(f"• Features: {len(MODEL_PARAMS['feature_names'])}")
                 
         except Exception as e:
             st.error(f"❌ Error making prediction: {str(e)}")
             st.write("Please check that all inputs are valid.")
     
+    # Model status in sidebar
     with st.sidebar:
-        st.subheader("🔧 System Status")
-        if os.path.exists('house_price_model.joblib'):
-            file_size = os.path.getsize('house_price_model.joblib')
-            if file_size > 1000:
-                st.success(f"✅ AI Model: Loaded ({file_size:,} bytes)")
-            else:
-                st.error(f"❌ AI Model: Corrupted ({file_size} bytes)")
-                st.info("Using smart fallback algorithm")
-        else:
-            st.warning("⚠️ AI Model: Not found")
-            st.info("Using smart fallback algorithm")
+        st.subheader("🤖 Model Status")
+        st.success("✅ Linear Regression Model")
+        st.write(f"**R² Score:** {MODEL_PARAMS['r2_score']:.4f}")
+        st.write(f"**Features:** {len(MODEL_PARAMS['feature_names'])}")
+        st.write("**Status:** Using exact trained coefficients")
 
 if __name__ == "__main__":
     main()
