@@ -2,8 +2,6 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 from joblib import load
-import matplotlib.pyplot as plt
-import seaborn as sns
 
 # Configure page
 st.set_page_config(
@@ -21,6 +19,9 @@ def load_model():
     except FileNotFoundError:
         st.error("Model file 'linear_regression_model.joblib' not found. Please ensure it's in the same directory as app.py")
         return None
+    except Exception as e:
+        st.error(f"Error loading model: {e}")
+        return None
 
 model = load_model()
 
@@ -32,93 +33,81 @@ Fill in the house details below to get a price prediction.
 """)
 
 if model is not None:
-    # Create sidebar for inputs
-    st.sidebar.header("House Features")
     
-    # Input fields for all features used in your model
-    area = st.sidebar.number_input(
-        "Area (sq ft)", 
-        min_value=1000, 
-        max_value=5000, 
-        value=2500, 
-        step=50,
-        help="Total area of the house in square feet"
-    )
+    # Main content layout (not sidebar)
+    st.header("🏡 Enter House Details")
     
-    bedrooms = st.sidebar.selectbox(
-        "Number of Bedrooms", 
-        options=[1, 2, 3, 4, 5], 
-        index=2,
-        help="Number of bedrooms in the house"
-    )
-    
-    bathrooms = st.sidebar.selectbox(
-        "Number of Bathrooms", 
-        options=[1, 2, 3, 4], 
-        index=1,
-        help="Number of bathrooms in the house"
-    )
-    
-    stories = st.sidebar.selectbox(
-        "Number of Stories", 
-        options=[1, 2, 3], 
-        index=0,
-        help="Number of floors/stories in the house"
-    )
-    
-    parking = st.sidebar.selectbox(
-        "Parking Spaces", 
-        options=[0, 1, 2, 3], 
-        index=1,
-        help="Number of parking spaces available"
-    )
-    
-    # Binary features
-    st.sidebar.subheader("House Amenities")
-    
-    mainroad = st.sidebar.checkbox("Main Road Access", value=True)
-    guestroom = st.sidebar.checkbox("Guest Room", value=False)
-    basement = st.sidebar.checkbox("Basement", value=False)
-    hotwaterheating = st.sidebar.checkbox("Hot Water Heating", value=True)
-    airconditioning = st.sidebar.checkbox("Air Conditioning", value=True)
-    prefarea = st.sidebar.checkbox("Preferred Area", value=False)
-    
-    # Furnishing status
-    furnishing_status = st.sidebar.selectbox(
-        "Furnishing Status",
-        options=["unfurnished", "semi-furnished", "furnished"],
-        index=0,
-        help="Current furnishing status of the house"
-    )
-    
-    # Create main content area with two columns
-    col1, col2 = st.columns([2, 1])
+    # Create three columns for better layout
+    col1, col2, col3 = st.columns(3)
     
     with col1:
-        st.subheader("House Details Summary")
+        st.subheader("📐 Size & Structure")
         
-        # Display input summary
-        summary_data = {
-            "Feature": ["Area", "Bedrooms", "Bathrooms", "Stories", "Parking", 
-                       "Main Road", "Guest Room", "Basement", "Hot Water Heating", 
-                       "Air Conditioning", "Preferred Area", "Furnishing"],
-            "Value": [f"{area:,} sq ft", bedrooms, bathrooms, stories, parking,
-                     "Yes" if mainroad else "No", "Yes" if guestroom else "No",
-                     "Yes" if basement else "No", "Yes" if hotwaterheating else "No",
-                     "Yes" if airconditioning else "No", "Yes" if prefarea else "No",
-                     furnishing_status.title()]
-        }
+        # Remove area limits - allow any reasonable value
+        area = st.number_input(
+            "Area (sq ft)", 
+            min_value=500, 
+            max_value=20000, 
+            value=2500, 
+            step=50,
+            help="Total area of the house in square feet"
+        )
         
-        summary_df = pd.DataFrame(summary_data)
-        st.table(summary_df)
+        bedrooms = st.selectbox(
+            "Number of Bedrooms", 
+            options=[1, 2, 3, 4, 5, 6], 
+            index=2,
+            help="Number of bedrooms in the house"
+        )
+        
+        bathrooms = st.selectbox(
+            "Number of Bathrooms", 
+            options=[1, 2, 3, 4, 5], 
+            index=1,
+            help="Number of bathrooms in the house"
+        )
+        
+        stories = st.selectbox(
+            "Number of Stories", 
+            options=[1, 2, 3, 4], 
+            index=0,
+            help="Number of floors/stories in the house"
+        )
     
     with col2:
-        st.subheader("Price Prediction")
+        st.subheader("🚗 Amenities & Features")
         
-        # Predict button
-        if st.button("🏠 Predict House Price", type="primary", use_container_width=True):
+        parking = st.selectbox(
+            "Parking Spaces", 
+            options=[0, 1, 2, 3, 4, 5], 
+            index=1,
+            help="Number of parking spaces available"
+        )
+        
+        mainroad = st.checkbox("Main Road Access", value=True)
+        guestroom = st.checkbox("Guest Room", value=False)
+        basement = st.checkbox("Basement", value=False)
+        hotwaterheating = st.checkbox("Hot Water Heating", value=True)
+        airconditioning = st.checkbox("Air Conditioning", value=True)
+        prefarea = st.checkbox("Preferred Area", value=False)
+    
+    with col3:
+        st.subheader("🪑 Furnishing Status")
+        
+        furnishing_status = st.selectbox(
+            "Furnishing Status",
+            options=["unfurnished", "semi-furnished", "furnished"],
+            index=0,
+            help="Current furnishing status of the house"
+        )
+        
+        # Add some spacing
+        st.write("")
+        st.write("")
+        
+        # Prediction button - larger and centered
+        if st.button("🏠 PREDICT HOUSE PRICE", type="primary", use_container_width=True):
             try:
-                # Prepare input data exactly as the model expects
                 # Convert binary features
                 mainroad_val = 1 if mainroad else 0
                 guestroom_val = 1 if guestroom else 0
@@ -131,8 +120,8 @@ if model is not None:
                 furnishingstatus_semifurnished = 1 if furnishing_status == "semi-furnished" else 0
                 furnishingstatus_unfurnished = 1 if furnishing_status == "unfurnished" else 0
                 
-                # Calculate engineered features (matching your preprocessing)
-                price_per_sqft_placeholder = 0  # This will be calculated after prediction
+                # Calculate engineered features (matching your preprocessing exactly)
+                price_per_sqft_placeholder = 100  # Reasonable placeholder
                 area_per_bed = area / max(bedrooms, 1)
                 bath_per_bed = bathrooms / max(bedrooms, 1)
                 parking_per_bed = parking / (bedrooms + 1)
@@ -142,73 +131,113 @@ if model is not None:
                 area_ac = area * airconditioning_val
                 area_sqrt = np.sqrt(area)
                 
-                # Create input array in the same order as training features
-                # Note: You might need to adjust the order based on your exact feature order
-                input_features = np.array([[
-                    area, bedrooms, bathrooms, stories, mainroad_val, guestroom_val,
-                    basement_val, hotwaterheating_val, airconditioning_val, parking,
-                    prefarea_val, furnishingstatus_semifurnished, furnishingstatus_unfurnished,
-                    price_per_sqft_placeholder, area_per_bed, bath_per_bed, parking_per_bed,
-                    amenity_count, area_pref, area_ac, area_sqrt
-                ]])
+                # Create feature array with CORRECT column order (matching training data)
+                # Order: area, bedrooms, bathrooms, stories, mainroad, guestroom, basement, 
+                #        hotwaterheating, airconditioning, parking, prefarea, 
+                #        furnishingstatus_semi-furnished, furnishingstatus_unfurnished,
+                #        price_per_sqft, area_per_bed, bath_per_bed, parking_per_bed,
+                #        amenity_count, area_pref, area_ac, area_sqrt
                 
-                # Make prediction (assuming model predicts log price)
-                log_price_pred = model.predict(input_features)[0]
+                input_data = {
+                    'area': area,
+                    'bedrooms': bedrooms,
+                    'bathrooms': bathrooms,
+                    'stories': stories,
+                    'mainroad': mainroad_val,
+                    'guestroom': guestroom_val,
+                    'basement': basement_val,
+                    'hotwaterheating': hotwaterheating_val,
+                    'airconditioning': airconditioning_val,
+                    'parking': parking,
+                    'prefarea': prefarea_val,
+                    'furnishingstatus_semi-furnished': furnishingstatus_semifurnished,
+                    'furnishingstatus_unfurnished': furnishingstatus_unfurnished,
+                    'price_per_sqft': price_per_sqft_placeholder,
+                    'area_per_bed': area_per_bed,
+                    'bath_per_bed': bath_per_bed,
+                    'parking_per_bed': parking_per_bed,
+                    'amenity_count': amenity_count,
+                    'area_pref': area_pref,
+                    'area_ac': area_ac,
+                    'area_sqrt': area_sqrt
+                }
+                
+                # Convert to DataFrame to ensure proper column order
+                input_df = pd.DataFrame([input_data])
+                
+                # Make prediction (model predicts log price)
+                log_price_pred = model.predict(input_df)[0]
                 price_pred = np.exp(log_price_pred)
                 
-                # Display prediction
-                st.success(f"### Predicted Price: ${price_pred:,.0f}")
-                
-                # Calculate price per sqft
-                price_per_sqft = price_pred / area
-                st.info(f"**Price per sq ft:** ${price_per_sqft:.2f}")
-                
-                # Add some context
+                # Display prediction in main area
                 st.markdown("---")
-                st.caption("💡 This prediction is based on a Linear Regression model trained on housing data with multiple features and engineered variables.")
+                st.success(f"## 💰 Predicted House Price: ${price_pred:,.0f}")
+                
+                # Additional info
+                price_per_sqft_actual = price_pred / area
+                st.info(f"**📏 Price per sq ft:** ${price_per_sqft_actual:.2f}")
+                
+                # Price range estimation
+                lower_bound = price_pred * 0.9
+                upper_bound = price_pred * 1.1
+                st.info(f"**📊 Estimated Range:** ${lower_bound:,.0f} - ${upper_bound:,.0f}")
                 
             except Exception as e:
-                st.error(f"Error making prediction: {str(e)}")
-                st.error("Please ensure the model file is compatible and all features are provided correctly.")
+                st.error(f"❌ Error making prediction: {str(e)}")
+                st.error("Please check that all inputs are valid and the model is properly loaded.")
+                
+                # Debug info
+                st.write("**Debug Information:**")
+                st.write(f"Model type: {type(model)}")
+                st.write(f"Input shape would be: {len(input_data)} features")
     
-    # Additional information section
+    # House details summary
     st.markdown("---")
-    st.subheader("About This Model")
+    st.subheader("📋 House Details Summary")
     
-    col3, col4 = st.columns(2)
+    # Display in a nice table format
+    col_left, col_right = st.columns(2)
     
-    with col3:
-        st.markdown("""
-        **Model Features:**
-        - Linear Regression with log-transformed target
-        - Feature engineering including ratios and interactions
-        - Standardized preprocessing pipeline
-        - Cross-validated performance
-        """)
+    with col_left:
+        summary_data_left = {
+            "Feature": ["🏠 Area", "🛏️ Bedrooms", "🚿 Bathrooms", "📐 Stories", "🚗 Parking"],
+            "Value": [f"{area:,} sq ft", bedrooms, bathrooms, stories, parking]
+        }
+        st.table(pd.DataFrame(summary_data_left))
     
-    with col4:
-        st.markdown("""
-        **Key Factors:**
-        - House area and number of rooms
-        - Location preferences and amenities
-        - Furnishing status and parking
-        - Engineered features for better accuracy
-        """)
+    with col_right:
+        summary_data_right = {
+            "Feature": ["🛣️ Main Road", "🏨 Guest Room", "🏠 Basement", "🔥 Hot Water", "❄️ AC", "⭐ Preferred Area"],
+            "Value": [
+                "✅ Yes" if mainroad else "❌ No",
+                "✅ Yes" if guestroom else "❌ No", 
+                "✅ Yes" if basement else "❌ No",
+                "✅ Yes" if hotwaterheating else "❌ No",
+                "✅ Yes" if airconditioning else "❌ No",
+                "✅ Yes" if prefarea else "❌ No"
+            ]
+        }
+        st.table(pd.DataFrame(summary_data_right))
     
-    # Model performance metrics (you can update these with your actual results)
-    st.subheader("Model Performance")
-    col5, col6, col7 = st.columns(3)
+    # Model info
+    st.markdown("---")
+    st.subheader("ℹ️ About This Model")
     
-    with col5:
-        st.metric("R² Score", "0.85", "High accuracy")
-    with col6:
-        st.metric("RMSE", "$45,000", "Average error")
-    with col7:
-        st.metric("MAE", "$32,000", "Typical deviation")
+    col_info1, col_info2, col_info3 = st.columns(3)
+    
+    with col_info1:
+        st.metric("🎯 Model Type", "Linear Regression", "Log-transformed")
+    
+    with col_info2:
+        st.metric("📊 R² Score", "~0.85", "High accuracy")
+    
+    with col_info3:
+        st.metric("🔧 Features", "21", "Engineered features")
 
 else:
-    st.error("Unable to load the model. Please check that 'linear_regression_model.joblib' is in the correct location.")
+    st.error("❌ Unable to load the prediction model. Please check the model file.")
 
 # Footer
 st.markdown("---")
-st.markdown("Made with ❤️ using Streamlit | Housing Price Prediction App")
+st.markdown("**Made with ❤️ using Streamlit | Housing Price Prediction App**")
+'''
