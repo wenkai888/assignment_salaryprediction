@@ -1,4 +1,3 @@
-requirements_complete = '''streamlit
 numpy
 pandas
 scikit-learn
