@@ -240,4 +240,3 @@ else:
 # Footer
 st.markdown("---")
 st.markdown("**Made with ❤️ using Streamlit | Housing Price Prediction App**")
-'''
