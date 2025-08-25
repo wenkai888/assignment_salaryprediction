@@ -5,6 +5,7 @@ from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 from joblib import load
+import streamlit as st
 
 
 # Load trained model
@@ -22,5 +23,6 @@ if st.button("Predict Salary"):
     features = np.array([[experience, test_score, interview_score]])
     prediction = model.predict(features)
     st.success(f"💰 Predicted Salary: {prediction[0]:,.2f}")
+
 
 
