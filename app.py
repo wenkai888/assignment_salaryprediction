@@ -3,7 +3,7 @@ import numpy as np
 from joblib import load
 
 # Load trained model
-model = load("linear_regression_model.joblib")
+model = load("best_salary_model.joblib")
 
 st.title("💼 Salary Prediction App")
 st.write("Enter the details below to predict salary:")
@@ -17,3 +17,4 @@ if st.button("Predict Salary"):
     features = np.array([[experience, test_score, interview_score]])
     prediction = model.predict(features)
     st.success(f"💰 Predicted Salary: {prediction[0]:,.2f}")
+
