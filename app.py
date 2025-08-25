@@ -53,7 +53,13 @@ if st.button("Predict Salary"):
     # Predict
     prediction = model.predict(input_df)[0]
     
+    # Calculate salary range (+/- 10%)
+    lower = prediction * 0.9
+    upper = prediction * 1.1
+    
     st.success(f"Predicted Salary: $ {prediction:,.2f}")
+    st.info(f"Estimated Salary Range: $ {lower:,.2f} – $ {upper:,.2f}")
+
 
 
 
