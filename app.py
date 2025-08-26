@@ -53,12 +53,14 @@ if st.button("Predict Salary"):
     # Predict
     prediction = model.predict(input_df)[0]
     
-    # Calculate salary range (+/- 10%)
-    lower = prediction * 0.9
-    upper = prediction * 1.1
+    # Use RMSE to show range
+    RMSE = 10286.93  
+    lower = prediction - RMSE
+    upper = prediction + RMSE
     
-    st.success(f"Predicted Salary: $ {prediction:,.2f}")
-    st.info(f"Estimated Salary Range: $ {lower:,.2f} – $ {upper:,.2f}")
+    st.success(f"Predicted Salary: RM {prediction:,.2f}")
+    st.info(f"Estimated Salary Range: RM {lower:,.2f} – RM {upper:,.2f}")
+
 
 
 
