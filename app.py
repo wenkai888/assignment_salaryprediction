@@ -35,7 +35,7 @@ experience = st.number_input(
     "Years of Experience", min_value=0, max_value=50, value=5
 )
 age = st.number_input(
-    "Age", min_value=20, max_value=64, value=25
+    "Age", min_value=18, max_value=64, value=25
 )
 
 # Predict button
@@ -65,6 +65,7 @@ if st.button("Predict Salary"):
         # Show results
         st.success(f"💰 Predicted Salary: $ {prediction:,.2f}")
         st.info(f"📊 Estimated Salary Range: $ {lower:,.2f} – $ {upper:,.2f}")
+
 
 
 
