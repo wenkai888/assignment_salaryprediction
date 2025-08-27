@@ -35,31 +35,36 @@ experience = st.number_input(
     "Years of Experience", min_value=0, max_value=50, value=5
 )
 age = st.number_input(
-    "Age", min_value=18, max_value=100, value=25
+    "Age", min_value=20, max_value=64, value=25
 )
 
 # Predict button
 if st.button("Predict Salary"):
-    # Create DataFrame from inputs
-    input_df = pd.DataFrame([{
-        "Education": education,
-        "Location": location,
-        "Job_Title": job_title,
-        "Gender": gender,
-        "Experience": experience,
-        "Age": age
-    }])
-    
-    # Predict
-    prediction = model.predict(input_df)[0]
-    
-    # Use RMSE to show range
-    RMSE = 10295.45
-    lower = prediction - RMSE
-    upper = prediction + RMSE
-    
-    st.success(f"Predicted Salary: $ {prediction:,.2f}")
-    st.info(f"Estimated Salary Range: $ {lower:,.2f} – $ {upper:,.2f}")
+    # Validation checks
+    if experience > age - 18:
+        st.error("⚠️ Years of experience cannot exceed working age (age - 18). Please adjust.")
+    else:
+        # Create DataFrame from inputs
+        input_df = pd.DataFrame([{
+            "Education": education,
+            "Location": location,
+            "Job_Title": job_title,
+            "Gender": gender,
+            "Experience": experience,
+            "Age": age
+        }])
+        
+        # Predict
+        prediction = model.predict(input_df)[0]
+        
+        # RMSE for range (replace with your model’s RMSE)
+        RMSE = 10295.45
+        lower = max(0, prediction - RMSE)  # no negative salary
+        upper = prediction + RMSE
+        
+        # Show results
+        st.success(f"💰 Predicted Salary: $ {prediction:,.2f}")
+        st.info(f"📊 Estimated Salary Range: $ {lower:,.2f} – $ {upper:,.2f}")
 
 
 
